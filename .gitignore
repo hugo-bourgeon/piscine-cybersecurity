@@ -1,6 +1,0 @@
-*.a
-*.o
-.DS_STORE
-.vscode/
-spider
-scorpion
