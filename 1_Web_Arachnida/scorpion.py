@@ -6,7 +6,7 @@
 #    By: hubourge <hubourge@student.42angouleme.    +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/06/04 16:40:00 by hubourge          #+#    #+#              #
-#    Updated: 2025/06/04 16:54:12 by hubourge         ###   ########.fr        #
+#    Updated: 2025/06/10 15:18:18 by hubourge         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -24,7 +24,6 @@ def parse_args():
     return parser.parse_args()
 
 def get_file_info(filepath):
-    """Get basic file information"""
     try:
         stat = os.stat(filepath)
         size = stat.st_size
@@ -40,10 +39,9 @@ def get_file_info(filepath):
         return None
 
 def extract_exif_data(image_path):
-    """Extract EXIF data from image"""
     try:
         with Image.open(image_path) as image:
-            # Get basic image info
+            # Get image info
             image_info = {
                 'format': image.format,
                 'mode': image.mode,
@@ -57,7 +55,7 @@ def extract_exif_data(image_path):
                 for tag_id, value in exif.items():
                     tag = TAGS.get(tag_id, tag_id)
                     
-                    # Handle GPS data specially
+                    # Handle GPS data
                     if tag == "GPSInfo":
                         gps_data = {}
                         for gps_tag_id, gps_value in value.items():
@@ -73,14 +71,13 @@ def extract_exif_data(image_path):
         return None, None
 
 def format_value(value):
-    """Format values for display"""
     if isinstance(value, bytes):
         try:
             return value.decode('utf-8', errors='ignore')
         except:
             return str(value)
     elif isinstance(value, tuple) and len(value) == 2:
-        # Handle rational numbers (common in EXIF)
+        # Handle rational numbers
         try:
             return f"{value[0]}/{value[1]}" if value[1] != 0 else str(value[0])
         except:
@@ -91,12 +88,11 @@ def format_value(value):
         return str(value)
 
 def display_metadata(filepath):
-    """Display all metadata for a file"""
     print(f"\n{'='*60}")
     print(f"File: {filepath}")
     print(f"{'='*60}")
     
-    # Check if file exists
+    # Check file exists
     if not os.path.exists(filepath):
         print(f" [Error] File not found: {filepath}")
         return
@@ -107,7 +103,7 @@ def display_metadata(filepath):
         print(f" [Error] Unsupported file format. Supported: {', '.join(valid_extensions)}")
         return
     
-    # Get file system info
+    # Get file info
     file_info = get_file_info(filepath)
     if file_info:
         print(f"\nFile Information:")
@@ -122,7 +118,7 @@ def display_metadata(filepath):
         print(f" [Error] Could not read image: {filepath}")
         return
     
-    # Display image information
+    # Display information
     print(f"\nImage Information:")
     print(f"  Format:     {image_info['format']}")
     print(f"  Mode:       {image_info['mode']}")
@@ -138,7 +134,7 @@ def display_metadata(filepath):
                 for sub_tag, sub_value in formatted_value.items():
                     print(f"    {sub_tag}: {sub_value}")
             else:
-                # Truncate very long values
+                # Truncate
                 if len(str(formatted_value)) > 100:
                     formatted_value = str(formatted_value)[:100] + "..."
                 print(f"  {tag}: {formatted_value}")
