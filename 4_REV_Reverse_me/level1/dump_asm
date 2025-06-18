@@ -1,0 +1,50 @@
+Dump of assembler code for function main:
+   0x565561c0 <+0>:	push   %ebp
+   0x565561c1 <+1>:	mov    %esp,%ebp
+   0x565561c3 <+3>:	push   %ebx
+=> 0x565561c4 <+4>:	sub    $0x84,%esp
+   0x565561ca <+10>:	call   0x565561cf <main+15>
+   0x565561cf <+15>:	pop    %ebx
+   0x565561d0 <+16>:	add    $0x2e31,%ebx
+   0x565561d6 <+22>:	mov    %ebx,-0x80(%ebp)
+   0x565561d9 <+25>:	movl   $0x0,-0x8(%ebp)
+   0x565561e0 <+32>:	mov    -0x1ff8(%ebx),%eax
+   0x565561e6 <+38>:	mov    %eax,-0x7a(%ebp)
+   0x565561e9 <+41>:	mov    -0x1ff4(%ebx),%eax
+   0x565561ef <+47>:	mov    %eax,-0x76(%ebp)
+   0x565561f2 <+50>:	mov    -0x1ff0(%ebx),%eax
+   0x565561f8 <+56>:	mov    %eax,-0x72(%ebp)
+   0x565561fb <+59>:	mov    -0x1fec(%ebx),%ax
+   0x56556202 <+66>:	mov    %ax,-0x6e(%ebp)
+   0x56556206 <+70>:	lea    -0x1fea(%ebx),%eax
+   0x5655620c <+76>:	mov    %eax,(%esp)
+   0x5655620f <+79>:	call   0x56556060 <printf@plt>
+   0x56556214 <+84>:	mov    -0x80(%ebp),%ebx
+   0x56556217 <+87>:	lea    -0x6c(%ebp),%eax
+   0x5655621a <+90>:	lea    -0x1fd7(%ebx),%ecx
+   0x56556220 <+96>:	mov    %ecx,(%esp)
+   0x56556223 <+99>:	mov    %eax,0x4(%esp)
+   0x56556227 <+103>:	call   0x56556070 <__isoc99_scanf@plt>
+   0x5655622c <+108>:	mov    -0x80(%ebp),%ebx
+   0x5655622f <+111>:	lea    -0x6c(%ebp),%ecx
+   0x56556232 <+114>:	lea    -0x7a(%ebp),%edx
+   0x56556235 <+117>:	mov    %esp,%eax
+   0x56556237 <+119>:	mov    %edx,0x4(%eax)
+   0x5655623a <+122>:	mov    %ecx,(%eax)
+   0x5655623c <+124>:	call   0x56556040 <strcmp@plt>
+   0x56556241 <+129>:	cmp    $0x0,%eax
+   0x56556244 <+132>:	jne    0x56556260 <main+160>
+   0x5655624a <+138>:	mov    -0x80(%ebp),%ebx
+   0x5655624d <+141>:	lea    -0x1fd4(%ebx),%eax
+   0x56556253 <+147>:	mov    %eax,(%esp)
+   0x56556256 <+150>:	call   0x56556060 <printf@plt>
+   0x5655625b <+155>:	jmp    0x56556271 <main+177>
+   0x56556260 <+160>:	mov    -0x80(%ebp),%ebx
+   0x56556263 <+163>:	lea    -0x1fc9(%ebx),%eax
+   0x56556269 <+169>:	mov    %eax,(%esp)
+   0x5655626c <+172>:	call   0x56556060 <printf@plt>
+   0x56556271 <+177>:	xor    %eax,%eax
+   0x56556273 <+179>:	add    $0x84,%esp
+   0x56556279 <+185>:	pop    %ebx
+   0x5655627a <+186>:	pop    %ebp
+   0x5655627b <+187>:	ret
