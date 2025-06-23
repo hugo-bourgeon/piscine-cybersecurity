@@ -1,0 +1,48 @@
+services:
+  hacker:
+    build:
+      context: .
+      dockerfile: docker_env/docker/Dockerfile
+    container_name: hacker
+    privileged: true
+    networks:
+      inquisitor_net:
+        ipv4_address: 192.168.100.10
+    cap_add:
+      - NET_ADMIN   # Enable network administration capabilities
+      - NET_RAW     # Enable raw sockets
+    tty: true       # Interactive mode
+  
+  source:
+    build:
+      context: .
+      dockerfile: docker_env/docker/Dockerfile
+    container_name: source
+    networks:
+      inquisitor_net:
+        ipv4_address: 192.168.100.11
+    cap_add:
+      - NET_ADMIN
+    tty: true
+
+  target:
+    build:
+      context: .
+      dockerfile: docker_env/docker/Dockerfile
+    container_name: target
+    networks:
+      inquisitor_net:
+        ipv4_address: 192.168.100.12
+    cap_add:
+      - NET_ADMIN
+    tty: true
+
+networks:
+  inquisitor_net:
+    name: inquisitor_net
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.100.0/24
+          gateway: 192.168.100.254
+
