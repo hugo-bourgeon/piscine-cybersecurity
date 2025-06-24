@@ -2,7 +2,7 @@ services:
   hacker:
     build:
       context: .
-      dockerfile: docker_env/docker/Dockerfile
+      dockerfile: docker_env/Dockerfile
     container_name: hacker
     privileged: true
     networks:
@@ -16,7 +16,7 @@ services:
   source:
     build:
       context: .
-      dockerfile: docker_env/docker/Dockerfile
+      dockerfile: docker_env/Dockerfile
     container_name: source
     networks:
       inquisitor_net:
@@ -28,7 +28,7 @@ services:
   target:
     build:
       context: .
-      dockerfile: docker_env/docker/Dockerfile
+      dockerfile: docker_env/Dockerfile
     container_name: target
     networks:
       inquisitor_net:

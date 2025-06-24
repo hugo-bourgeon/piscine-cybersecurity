@@ -6,7 +6,7 @@
 #    By: hubourge <hubourge@student.42angouleme.    +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/04/24 15:32:18 by hubourge          #+#    #+#              #
-#    Updated: 2025/06/23 16:31:33 by hubourge         ###   ########.fr        #
+#    Updated: 2025/06/24 15:43:48 by hubourge         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -29,18 +29,19 @@ re: flean all
 # /-------------- Docker --------------/
 DOCKER_COMPOSE = docker-compose.yml
 HACKER_NAME = hacker
+SOURCE_NAME = source
 TARGET_NAME = target
 
 docker: docker-build docker-stats
 
 docker-build:
-	@docker compose -f $(DOCKER_COMPOSE) up --build -d
+	@docker-compose -f $(DOCKER_COMPOSE) up --build -d
 
 docker-stop:
-	@docker compose -f $(DOCKER_COMPOSE) stop
+	@docker-compose -f $(DOCKER_COMPOSE) stop
 
 docker-down:
-	@docker compose -f $(DOCKER_COMPOSE) down -v
+	@docker-compose -f $(DOCKER_COMPOSE) down -v
 
 docker-erase: docker-stop docker-down
 	@docker container prune -f
@@ -59,6 +60,8 @@ docker-stats:
 	@ echo "NAME     IP                MAC "
 	@ echo "$(BIBlue)$(HACKER_NAME)   $(RED)$(shell docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $(HACKER_NAME))\
 		   $(shell docker inspect -f '{{range .NetworkSettings.Networks}}{{.MacAddress}}{{end}}' $(HACKER_NAME)) $(NC)"
+	@ echo "$(BIBlue)$(SOURCE_NAME)   $(RED)$(shell docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $(SOURCE_NAME))\
+		   $(shell docker inspect -f '{{range .NetworkSettings.Networks}}{{.MacAddress}}{{end}}' $(SOURCE_NAME)) $(NC)"
 	@ echo "$(BIBlue)$(TARGET_NAME)   $(RED)$(shell docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' $(TARGET_NAME))\
 		   $(shell docker inspect -f '{{range .NetworkSettings.Networks}}{{.MacAddress}}{{end}}' $(TARGET_NAME)) $(NC)"
 	@ echo "$(NC)"
