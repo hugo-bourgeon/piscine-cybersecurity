@@ -6,14 +6,14 @@
 #    By: hubourge <hubourge@student.42angouleme.    +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/06/23 17:24:19 by hubourge          #+#    #+#              #
-#    Updated: 2025/06/24 16:37:19 by hubourge         ###   ########.fr        #
+#    Updated: 2025/06/25 15:59:51 by hubourge         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 from ftplib import FTP
 import time
 
-FTP_SERVER = "10.12.248.141"  # IP du serveur FTP
+FTP_SERVER = "10.11.248.170"  # IP du serveur FTP
 FTP_PORT = 21
 FTP_USER = "testftp"
 FTP_PASS = "testftp"

