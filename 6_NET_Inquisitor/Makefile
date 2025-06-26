@@ -6,7 +6,7 @@
 #    By: hubourge <hubourge@student.42angouleme.    +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/04/24 15:32:18 by hubourge          #+#    #+#              #
-#    Updated: 2025/06/24 15:43:48 by hubourge         ###   ########.fr        #
+#    Updated: 2025/06/26 16:08:55 by hubourge         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -35,13 +35,13 @@ TARGET_NAME = target
 docker: docker-build docker-stats
 
 docker-build:
-	@docker-compose -f $(DOCKER_COMPOSE) up --build -d
+	@docker compose -f $(DOCKER_COMPOSE) up --build -d
 
 docker-stop:
-	@docker-compose -f $(DOCKER_COMPOSE) stop
+	@docker compose -f $(DOCKER_COMPOSE) stop
 
 docker-down:
-	@docker-compose -f $(DOCKER_COMPOSE) down -v
+	@docker compose -f $(DOCKER_COMPOSE) down -v
 
 docker-erase: docker-stop docker-down
 	@docker container prune -f

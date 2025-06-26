@@ -26,5 +26,6 @@ WORKDIR /home
 
 COPY inquisitor.py /home/inquisitor.py
 COPY ftp_test.py /home/ftp_test.py
+COPY test.py /home/test.py
 
 CMD ["/bin/bash"]
